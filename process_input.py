@@ -1,24 +1,19 @@
-import cgi
-import cgitb
+
 import spotipy
 import openai
 import http.server
 
-def run():
+def run(prompt):
 
-  cgitb.enable()
+  user_response = prompt
+  # process prompt example "inputText=my%20dog%20died" into "my dog died"
+  user_response = user_response.replace("inputText=", "")
+  user_response = user_response.replace("%20", " ")
 
-  form = cgi.FieldStorage()
 
-  inputText = form.getvalue("inputText")
+  openai.api_key = "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"
 
-  user_response = inputText
-
-  # process inputText as needed
-
-  openai.api_key = "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"
-
-  davinci_prompt = str(user_response) + ". Suggest me two funny songs and no other text. \n\n"
+  davinci_prompt = str(user_response) + ". Suggest me two funny songs and no other text in the format 1. \"name\" by artist 2. \"name\" by artist \n\n"
   print("INFO: Prompt is: " + davinci_prompt)
 
   response = openai.Completion.create(
@@ -33,40 +28,68 @@ def run():
   print(response.choices[0].text)
 
   # Split the two songs
-  songs = response.choices[0].text.split("2. ")
+  song_name_and_artist = response.choices[0].text
 
-  # Split the song name and artist
+  # Split the two songs and remove the " from the song name
+  songs = song_name_and_artist.split("2. ")
+
   song1 = songs[0].split(" by ")
   song2 = songs[1].split(" by ")
 
-  # Remove the " from the song name
-  song1[0] = song1[0].replace('"', '')
-  song2[0] = song2[0].replace('"', '')
+  # Remove 1. from song name
+  song1[0] = song1[0].replace("1. ", "")
 
-  # Remove first three characters from first song name
-  song1[0] = song1[0][3:]
+  # Strip anything that's not a letter or a space
+  try:
+    song1[0] = ''.join(e for e in song1[0] if e.isalnum() or e == ' ')
+    song2[0] = ''.join(e for e in song2[0] if e.isalnum() or e == ' ')
+  except:
+    print("ERROR: Song name or artist name is empty")
+  
+  try:
+    song1[1] = ''.join(e for e in song1[1] if e.isalnum() or e == ' ')
+    song2[1] = ''.join(e for e in song2[1] if e.isalnum() or e == ' ')
+  except:
+    print("ERROR: Song name or artist name is empty")
 
-  # Print the songs
-  # print("Song 1: " + song1[0] + " by " + song1[1])
-  # print("Song 2: " + song2[0] + " by " + song2[1])
+
+
+
 
   # Get the spotify track ID for the song
-  spotify = spotipy.Spotify(auth='BQDNah94rSTj7W0yNVNXW2K_Q3ZSKjRR_lfsF3JkQZjL2k0a4J3ixFoPtRh2lrJ4bLgoD6UyAP4oRLCt6E1xUqtPUfHgpwBuk5OCNZYcjZf3-yVG-42Aksx6JF-doXiKg_aQZ91tTREBA7ltMbJIi25TRu7tGIAU96UjGjMWnaNWAUw1fUnCAhiEXCf21l7rG6s')
+  spotify = spotipy.Spotify(auth='BQA4Lc-eHINWa9RDp18OMYCGPOWOZQD5rWre2Qg617Pt_XFj9aP_xceTbyzcgPxOb3J8rXcLMEkUacQeWafxvfaqTOGOnMfOia5Md7LPIvDggox4pU8kf1OxPmKQI30IKGaFYRdo6Yi1gDThLH9AZFr3bns2RkqXmYSN_J_jHC1SCnwvAdPZLlEAUkwJW4X2wbY')
+
+  url1 = ""
+  url2 = ""
+
+  print(song1)
+  print(song2)
 
   # Song 1
+  # Search spotify for the song ID
   results = spotify.search(q='artist:' + song1[1] + ' track:' + song1[0], type='track')
-  trackId1 = results['tracks']['items'][0]['id']
+  try:
+    trackId1 = results['tracks']['items'][0]['id']
+    url1 = "https://open.spotify.com/embed/track/" + trackId1 + "?utm_source=generator"
+  except: 
+    print("ERROR: No track ID found for song 1")
+  #Song 2
+  results = spotify.search(q='artist:' + song2[1] + ' track:' + song2[0], type='track')
+  try:
+    trackId2 = results['tracks']['items'][0]['id']
+    url2 = "https://open.spotify.com/embed/track/" + trackId2 + "?utm_source=generator"
+  except:
+    print("ERROR: No track ID found for song 2")
 
-  # Song 2
-  results2 = spotify.search(q='artist:' + song2[1] + ' track:' + song2[0], type='track')
-  trackId2 = results2['tracks']['items'][0]['id']
 
-  # Generate the spotify URL for the song
-  url1 = "https://open.spotify.com/embed/track/" + trackId1 + "?utm_source=generator"
-  url2 = "https://open.spotify.com/embed/track/" + trackId2 + "?utm_source=generator"
-
-  print('<script>')
-  print('document.getElementById("frame1").src = "{}";'.format(url1))
-  print('document.getElementById("frame2").src = "{}";'.format(url2))
-  print('</script>')
+  print("Here!")
+  #Generate the spotify URL for the song
+  
+  
+  return (url1, url2)
+  
+  # print('<script>')
+  # print('document.getElementById("frame1").src = "{}";'.format(url1))
+  # print('document.getElementById("frame2").src = "{}";'.format(url2))
+  # print('</script>')
 

@@ -5,31 +5,36 @@ from process_input import run
 
 
 class MyHandler(BaseHTTPRequestHandler):
+
     def do_GET(self):
+        
+        print("Yep")
         f = open("./index.html").read()
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(bytes(f, "utf-8"))
+        self.wfile.write(bytes("Hello", "utf-8"))
 
 
     def do_POST(self):
-        
-        run()
 
         content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length).decode('utf-8')
-        params = parse_qs(post_data)
-        # process the data in params
-
+        data_input = bytes.decode(self.rfile.read(content_length))
+        
+        print("Prompt: " + data_input)
+        url1, url2  = run(data_input)
+        print("URL1", url1)
+        print("URL2", url2)
         # generate the HTML for the iframes
         iframe1 = f'<iframe src="{url1}"></iframe>'
         iframe2 = f'<iframe src="{url2}"></iframe>'
+        print(iframe1)
         # send the response
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        self.wfile.write(bytes(iframe1, 'utf-8'))
-        self.wfile.write(bytes(iframe2, 'utf-8'))
+        self.wfile.write(bytes(url1, 'utf-8'))
+        self.wfile.write(bytes(url2, 'utf-8'))
+        print("Finished Post")
 
 
 httpd = HTTPServer(('localhost', 8000), MyHandler)
